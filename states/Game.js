@@ -48,7 +48,20 @@ Game.prototype = {
 		},this);
 
 		this.player.customProps = {left:false,right:false,up:false};
+		this.hitGorilla = false;
 		this.createControls();
+		//this.killGorilla();
+
+		var style = {
+			font: "Arial Black",
+			fill: "#FFFFFF",
+			fontSize: "50px"
+		};
+		this.youWinTxt = this.game.add.text(0,0,'YOU WIN!!',style);
+		this.youWinTxt.anchor.setTo(0.5);
+		this.youWinTxt.x = this.game.world.centerX;
+		this.youWinTxt.y = this.game.world.centerY;
+		this.youWinTxt.alpha = 0;
 	},
 
 	createControls:function(){
@@ -96,43 +109,62 @@ Game.prototype = {
 	},
 
 	update:function(){
-		this.elapsed +=this.game.time.elapsed;
-		if(this.elapsed>=this.barrilsSpawnTime){
-			this.elapsed = 0;
-			this.generateBarryl();
-		}
 		this.game.physics.arcade.collide(this.barrils,this.platforms);
 		this.game.physics.arcade.collide(this.ground,this.barrils);
 		this.game.physics.arcade.collide(this.player,this.ground);
 		this.game.physics.arcade.collide(this.player,this.platforms);
 		this.game.physics.arcade.collide(this.gorilla,this.platforms);
 		this.game.physics.arcade.collide(this.fires,this.platforms);
-		this.player.body.velocity.x = 0;
+		if(!this.hitGorilla){
+			this.elapsed +=this.game.time.elapsed;
+			if(this.elapsed>=this.barrilsSpawnTime){
+				this.elapsed = 0;
+				this.generateBarryl();
+			}
+			
+			this.game.physics.arcade.overlap(this.player,this.gorilla,null,function(){
+				this.hitGorilla = true;
+				this.player.body.velocity.x = 0;
+				this.killGorilla();
+			},this);
+			this.player.body.velocity.x = 0;
 
-		if(this.keys.left.isDown || this.player.customProps.left){
-			this.player.scale.setTo(1);
-			this.player.body.velocity.x = -100;
-			this.player.animations.play('walking');
-		}else if(this.keys.right.isDown || this.player.customProps.right){
-			this.player.body.velocity.x = 100;
-			this.player.scale.setTo(-1,1);
-			this.player.animations.play('walking');
-		}else {
-			this.player.animations.stop();
-			this.player.frame = 3;
+			if(this.keys.left.isDown || this.player.customProps.left){
+				this.player.scale.setTo(1);
+				this.player.body.velocity.x = -100;
+				this.player.animations.play('walking');
+			}else if(this.keys.right.isDown || this.player.customProps.right){
+				this.player.body.velocity.x = 100;
+				this.player.scale.setTo(-1,1);
+				this.player.animations.play('walking');
+			}else {
+				this.player.animations.stop();
+				this.player.frame = 3;
+			}
+
+			this.barrils.forEach(function(element){
+	            if(element.x< 10 && element.y > 600){
+	              element.kill();
+	            }
+	    	},this);
+
+			if(this.player.body.touching.down && (this.keys.up.isDown || this.player.customProps.up)){
+				this.player.body.velocity.y = -550;
+			}	
 		}
-
-		this.barrils.forEach(function(element){
-            if(element.x< 10 && element.y > 600){
-              element.kill();
-            }
-    	},this);
-
-		if(this.player.body.touching.down && (this.keys.up.isDown || this.player.customProps.up)){
-			this.player.body.velocity.y = -550;
-		}
-
 	},
+	killGorilla:function(){
+		var tween = this.game.add.tween(this.gorilla).to({tint:0xff0000},500).start();
+		tween.onComplete.add(this.killPart2,this);
+	},
+
+	killPart2:function(){
+		var tween = this.game.add.tween(this.gorilla).to({alpha:0},500).start();
+		tween.onComplete.add(function(){
+			tween = this.game.add.tween(this.youWinTxt).to({alpha:1},500).start();
+		},this);
+	},
+
 	generateBarryl:function(){
 		var barryl =this.game.add.sprite(this.gameData.goal.x,
 				this.gameData.goal.y,'barrel');
